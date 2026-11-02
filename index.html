@@ -314,7 +314,9 @@
       <p class="tldr"><b>TL;DR:</b> Initialising diffusion transformers with ImageNet weights improves medical image
         generation, in both latent and pixel space denoising. Natural-image initialisation results in <strong>more spatially
         structured representations, not more semantic ones</strong>, and this spatial structure (LDS<sub>C</sub>) correlates with
-        generation fidelity. Mixing natural with medical images also helps medical fidelity.</p>
+        generation fidelity. Mixing natural with medical images also improves medical fidelity, while early-to-mid representations
+        stay similar across domains in the mixed model. Last but not least, natural-image pretraining outperforms or matches
+        medical-image pretraining in our setup.</p>
       <div class="hl-grid">
         <a href="#finding-a"><span class="finding-icon"><i class="fas fa-long-arrow-alt-right"></i></span>
           <span><b>A.</b> Transfer helps, and most in pixel space</span></a>
@@ -687,7 +689,7 @@
       <div class="content discussion">
         <p>Natural-image (ImageNet) initialisation of the denoiser improves medical image generation
           (<a href="#finding-a">Finding A</a>). Semantics do not explain this benefit since models trained from scratch reach
-          similar semantic probe accuracy yet generate worse samples. Spatial structure does. LDS<sub>C</sub>, a spatial
+          similar semantic probe accuracy yet generate worse samples. Spatial structure is a stronger candidate. LDS<sub>C</sub>, a spatial
           structure metric adapted to internal denoiser representations, predicts about two-thirds of the pretraining
           benefit (<a href="#finding-b">Finding B</a>). <strong>Therefore, better spatial organisation is one channel
           through which pretraining manifests.</strong>
@@ -696,10 +698,7 @@
           Furthermore, mixing natural
           images into medical training improves medical gFID (<a href="#finding-c">Finding C</a>). Both results point
           towards lower-level information shared across the two domains.
-          Finally, medical pretraining, although much closer to the target domain, does not give a further boost in our
-          experiments (<a href="#finding-d">Finding D</a>), suggesting (again) that domain-specific, higher-level information is
-          not what drives the benefit. <strong>Together, these results show that the benefit is tied to natural-image
-          initialisation.</strong>
+          Finally, medical pretraining does not give a further boost in our experiments (<a href="#finding-d">Finding D</a>). <strong>Together, these results show that, from a generative modelling lens, natural images are very useful for medical image generation: both the information transferred through initialisation and the representations that it enables the model to learn benefit medical fidelity.</strong>
         </p>
       </div>
     </div>
