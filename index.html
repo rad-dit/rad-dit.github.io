@@ -480,7 +480,7 @@
         <li id="finding-b">
           <span class="finding-icon wide"><i class="fas fa-border-all"></i><small>vs</small><i class="fas fa-brain"></i></span>
           <span class="finding-tag">Finding B</span>
-          <b class="head">What transfers: spatial structure, not semantics.</b>
+          <b class="head">What transfers: spatial structure, not semantics (it helps learn better spatially structured features, not more semantic features).</b>
           Since the pixel denoiser carries the entire prior, we focus on pixel-space JiT and ask whether the benefit reflects
           high-level (semantics) or low-level (spatial) structure.
           <p class="fa-sub">Semantics do not predict generation quality</p>
@@ -581,7 +581,7 @@
         <li id="finding-c">
           <span class="finding-icon"><i class="fas fa-clone"></i></span>
           <span class="finding-tag">Finding C</span>
-          <b class="head">Mixed-domain training.</b>
+          <b class="head">Mixed-domain training helps.</b>
           <p class="fa-sub">Early-to-mid representations are shared across domains</p>
           <ul class="fa-points">
             <li>We further test the structural hypothesis and train JiT-L/16 jointly on RadIN and 10% IN
@@ -621,7 +621,7 @@
         <li id="finding-d">
           <span class="finding-icon"><i class="fas fa-x-ray"></i></span>
           <span class="finding-tag">Finding D</span>
-          <b class="head">Natural-image transfer outperforms medical pretraining.</b>
+          <b class="head">Natural-image transfer outperforms medical pretraining (in our setup).</b>
           A natural alternative to IN-init is to pretrain on medical data directly. To our knowledge no 2D radiology
           denoiser weights exist at a compatible architecture, so we train our own. We test two cases: single and
           multi-channel target domain.
