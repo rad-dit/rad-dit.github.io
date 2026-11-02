@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <meta name="robots" content="index, follow">
+
+  <meta name="title" content="From Natural Images to Medical Scans: Transferability of Diffusion Models for Medical Image Generation">
+  <meta name="description" content="ImageNet-pretrained diffusion transformers (pixel-space JiT and latent LightningDiT) transfer to medical image generation on RadImageNet and BraTS.">
+  <meta name="keywords" content="diffusion transformers, transfer learning, medical image generation, RadImageNet, BraTS, JiT, LightningDiT">
+  <meta name="author" content="Efthymios Georgiou, Ioannis Kakogeorgiou, Sarah Brüningk">
+
+  
+  <title>From Natural Images to Medical Scans</title>
+
+  <link rel="icon" type="image/svg+xml" href="static/images/favicon.svg">
+
+  <link rel="stylesheet" href="static/css/bulma.min.css">
+  <link rel="stylesheet" href="static/css/index.css">
+  <link rel="preload" href="static/css/bulma-carousel.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <link rel="preload" href="static/css/fontawesome.all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <link rel="preload" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript>
+    <link rel="stylesheet" href="static/css/bulma-carousel.min.css">
+    <link rel="stylesheet" href="static/css/fontawesome.all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+  </noscript>
+  <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400&display=swap" rel="stylesheet">
+
+  <script defer src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script defer src="static/js/fontawesome.all.min.js"></script>
+  <script defer src="static/js/bulma-carousel.min.js"></script>
+  <script defer src="static/js/bulma-slider.min.js"></script>
+  <script defer src="static/js/index.js"></script>
+  <script defer src="static/js/present.js"></script>
+
+  <style>
+    .draft-banner { background: #fff3cd; color: #664d03; text-align: center; padding: .5rem 1rem; font-size: .9rem; }
+    .todo { background: #fde2e1; color: #8a1c1c; padding: 0 .3rem; border-radius: 3px; }
+    .results-table { margin: 0 auto; }
+    .results-table td, .results-table th { text-align: center; vertical-align: middle; }
+    .results-table td:first-child, .results-table th:first-child { text-align: left; }
+    .explorer-controls { display: flex; flex-wrap: wrap; gap: .75rem; justify-content: center; margin-bottom: 1rem; }
+    .explorer-panel img { width: 100%; border-radius: 6px; }
+    .explorer-panel .select, .explorer-panel select { width: 100%; }
+    .explorer-panel p.caption { font-size: .9rem; color: #555; margin-top: .4rem; text-align: center; }
+    .figure-caption { font-size: .95rem; color: #555; margin-top: .6rem; }
+    .results-carousel .item img { max-height: none; }
+
+    /* Typography: Charter serif for the whole page */
+    :root { --font-serif: 'Bitstream Charter', 'Charter', Georgia, serif;
+            --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    body, input, select, button, .button, .content, .subtitle, .title, .publication-title,
+    h1, h2, h3, h4, h5, .publication-authors, .copy-bibtex-btn { font-family: var(--font-serif) !important; }
+    pre, code, #bibtex-code { font-family: 'Geist Mono', ui-monospace, monospace !important; }
+    .title, h2, h3 { font-weight: 500 !important; letter-spacing: -0.015em; }
+    .publication-title { font-size: 2.65rem !important; font-weight: 500 !important; line-height: 1.25 !important;
+      letter-spacing: -0.02em; margin-bottom: 1.5rem !important; }
+    .publication-title .title-sub { display: block; font-weight: 400; font-size: 2.25rem; margin-top: .55rem;
+      color: #111827; letter-spacing: -0.01em; }
+    .title-thumb { height: 1.3em; width: 1.3em; object-fit: cover; border-radius: 6px; vertical-align: -0.12em;
+      margin: 0 .08em 0 .28em; box-shadow: 0 1px 3px rgb(0 0 0 / .25); }
+    .hero .container.is-max-desktop:first-child { max-width: 1100px !important; }
+    @media (max-width: 768px) { .publication-title .title-sub { font-size: 1.55rem; } }
+    .publication-authors { font-weight: 400; }
+    @media (max-width: 768px) { .publication-title { font-size: 1.8rem !important; } }
+
+    /* Palette: neutral greys, one accent blue (#2563eb) only for highlights */
+    :root {
+      --primary-color: #2563eb; --primary-hover: #1d4ed8; --accent-color: #2563eb;
+      --text-primary: #1a1a1a; --text-secondary: #444; --text-muted: #666; --border-light: #e5e5e5;
+    }
+    body, .content, .subtitle, .publication-authors, .publication-authors a { color: #444; }
+    .title, .publication-title, h1, h2, h3, h4 { color: #1a1a1a !important; }
+    .publication-title, .publication-title .title-sub { color: #1a1a1a !important; }
+    body > section.hero:first-of-type { background: linear-gradient(135deg, #ffffff 0%, #f8f6f2 40%, #fdf8f0 100%); }
+    a { color: #2563eb; }
+    .button.is-dark { background-color: #1a1a1a; }
+    .button.is-dark:hover { background-color: #2563eb; }
+    .hero.is-light, .section.hero.is-light { background-color: #f8f9fa; }
+    .figure-caption, .explorer-panel p.caption { color: #666; }
+    .results-table thead th { color: #1a1a1a; }
+    strong { color: #2563eb; }
+    section.section h2.title, section.section h3.title { color: #2563eb !important; }
+    :root { --gradient-accent: #93c5fd; }   /* line under section headings + author-link hover line */
+    .title.is-3 { font-family: var(--font-serif) !important; font-weight: 600 !important; }
+    /* Link buttons: oval pills, one brand-like colour each */
+    .publication-links .button { border-radius: 999px !important; padding: 0 1.5rem !important; height: 2.6rem;
+      border: none; font-weight: 500; transition: transform .15s, box-shadow .15s, filter .15s; }
+    .publication-links .button:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgb(0 0 0 / .15); filter: brightness(1.08); }
+    /* brand colours for the link buttons */
+    .btn-arxiv { background: #b31b1b !important; color: #fff !important; }
+    .btn-code { background: #1e2327 !important; color: #fff !important; }
+    .btn-hf { background: #ffd21e !important; color: #1a1a1a !important; }
+    .btn-present { background: #2563eb !important; color: #fff !important; }
+    .arxiv-mark { height: 1.05em; width: auto; }
+    .publication-authors a { color: #2563eb !important; }
+    .publication-authors a:hover { color: #1d4ed8 !important; }
+    .publication-authors.affiliations { font-size: 1rem; color: #666; margin-top: .3rem; }
+    .publication-authors .venue { font-weight: 600; color: #1a1a1a; font-size: 1.1rem; }
+
+    .takeaways { counter-reset: tk; list-style: none; margin-left: 0 !important; }
+    .takeaways li { counter-increment: tk; position: relative; padding: .9rem 1rem .9rem 3.4rem;
+      margin-bottom: .8rem; background: #fff; border-left: 4px solid #2563eb; border-radius: 8px;
+      box-shadow: 0 2px 8px rgb(0 0 0 / .08); }
+    .takeaways li { padding-left: 4.2rem !important; }
+    .finding-icon { position: absolute; left: 1rem; top: 1rem; width: 2.4rem; height: 2.4rem; border-radius: 50%;
+      background: #dbeafe; color: #2563eb; display: inline-flex; align-items: center; justify-content: center; font-size: 1.05rem; }
+    .finding-icon.wide { width: auto; padding: 0 .55rem; border-radius: 999px; gap: .3rem; left: .6rem; top: auto; bottom: auto; }
+    .finding-icon.wide small { font-size: .6rem; font-weight: 600; color: #666; }
+    .finding-icon.text { font-size: .72rem; font-weight: 700; letter-spacing: -.01em; }
+    .finding-icon.text sub { font-size: .55rem; }
+    /* Finding B: same left indent as the others; its two-icon badge stacks vertically */
+    .takeaways .finding-icon.wide { left: 1rem; top: 1rem; width: 2.4rem; height: auto; padding: .45rem 0;
+      flex-direction: column; gap: .15rem; border-radius: 999px; font-size: .95rem; }
+    .takeaways li::before { display: none !important; }
+    .takeaways li::before { content: counter(tk); position: absolute; left: 1rem; top: .85rem;
+      width: 1.7rem; height: 1.7rem; border-radius: 50%; background: #2563eb; color: #fff;
+      font-weight: 700; text-align: center; line-height: 1.7rem; }
+    .takeaways li b.head { color: #1a1a1a; display: block; margin: .35rem 0 .6rem; padding: .6rem .9rem;
+      background: #eff6ff; border: 1px solid #bfdbfe; border-left: 4px solid #2563eb; border-radius: 8px; font-size: 1.05rem; }
+    .tldr-section { padding-top: 0; padding-bottom: 1.5rem; }
+    .tldr { font-size: 1.15rem; line-height: 1.6; padding: 1rem 1.25rem; border-left: 4px solid #2563eb;
+      background: #f8f9fa; border-radius: 6px; margin-bottom: 1.5rem; color: #444; }
+    .tldr > b:first-child { color: #1a1a1a; }
+    .highlights .column { text-align: center; }
+    .highlights p { font-size: .98rem; }
+    .hl-icon { display: inline-flex; width: 2.8rem; height: 2.8rem; border-radius: 50%; background: #dbeafe;
+      color: #2563eb; align-items: center; justify-content: center; font-size: 1.2rem; margin-bottom: .5rem; }
+    .hl-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .7rem; margin-bottom: .5rem; }
+    .hl-grid a { display: flex; align-items: center; gap: .7rem; padding: .7rem .8rem; border: 1px solid #e5e5e5;
+      border-radius: 10px; color: #1a1a1a; transition: box-shadow .15s, transform .15s; }
+    .hl-grid a:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgb(0 0 0 / .12); }
+    .hl-grid .finding-icon { position: static; flex: none; }
+    .hl-grid a b { color: #2563eb; }
+    .hl-grid a:hover { color: #2563eb; }
+    .hl-grid .finding-icon.wide { height: 2.4rem; }
+    @media (max-width: 768px) { .hl-grid { grid-template-columns: 1fr; } }
+    .jump-cards { display: flex; flex-wrap: wrap; gap: .75rem; justify-content: center; margin-top: 1rem; }
+    .jump-cards a { display: flex; flex-direction: column; align-items: center; gap: .35rem; min-width: 96px;
+      padding: .8rem 1rem; border: 1px solid #e5e5e5; border-radius: 10px; color: #2563eb; font-weight: 500;
+      transition: transform .15s, box-shadow .15s; }
+    .jump-cards a:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgb(0 0 0 / .12); }
+    .jump-cards i { font-size: 1.3rem; color: #2563eb; }
+    .finding-tag { display: inline-block; font-size: .78rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+      color: #666; margin-bottom: .15rem; }
+    html { scroll-behavior: smooth; }
+    .setup-list { list-style: none; margin: 0; padding: 0; }
+    .setup-list li { padding: .45rem 0; border-bottom: 1px solid #e5e5e5; }
+    .figure-slot { margin-top: .7rem; padding: 1.2rem; border: 1px dashed #d4d4d4; border-radius: 8px; text-align: center; }
+    /* Paper Table 1 (colours as in the paper: pink = medical-image model, blue = natural-image model) */
+    .paper-table-wrap { margin-top: .8rem; overflow-x: auto; }
+    .takeaways .paper-table { margin: 0 auto; border-collapse: collapse; border-bottom: 2px solid #ddd;
+      font-size: .85rem; background: #fff; width: auto !important; }
+    .takeaways .paper-table th { font-weight: 700; color: #1a1a1a; padding: .3rem .8rem;
+      border-bottom: 2px solid #ddd; text-align: center !important; }
+    .takeaways .paper-table td { padding: .2rem .8rem; text-align: center; border: none; border-bottom: 1px solid #eee; color: #1a1a1a; }
+    .takeaways .paper-table th.th-group { border-bottom: 1px solid #ddd; padding-bottom: .1rem; }
+    .takeaways .paper-table th[rowspan] { vertical-align: bottom; }
+    .takeaways .paper-table td.gain { color: #1e6b2e; }
+    .takeaways .paper-table td:first-child, .takeaways .paper-table th:first-child { text-align: left !important; }
+    .takeaways .paper-table code { background: transparent !important; color: #1a1a1a !important; padding: 0; font-size: 1em;
+      font-family: var(--font-serif) !important; font-weight: 600; }
+    .takeaways .paper-table tr.group td { background: #f2f2f2; text-transform: uppercase; font-weight: 400; letter-spacing: .06em;
+      font-size: .78rem; color: #444; padding: .12rem; border-bottom: 1px solid #ddd; }
+    .paper-table .chip { padding: .05rem .4rem !important; border-radius: 3px; }
+    .paper-table .chip.med, .swatch.med { background: #fcecef !important; }
+    .paper-table .chip.nat, .swatch.nat { background: #dcebfb !important; }
+    .paper-table .plus { color: #666; margin: 0 .15rem; }
+    .takeaways .paper-table tr.group td { text-align: center !important; }
+    .takeaways .paper-table b { color: #1a1a1a; }
+    .paper-table .row-note { font-size: .85em; color: #666; }
+    .fa-points { margin: .4rem 0 .2rem 1.1rem !important; }
+    .fa-points li { padding: 0 !important; margin: .25rem 0 !important; background: none !important; box-shadow: none !important;
+      border: none !important; list-style: disc; }
+    .table-pair { display: flex; flex-wrap: wrap; gap: 1.5rem; justify-content: center; align-items: flex-start; }
+    .panel-title { text-align: center; font-weight: 700; font-size: .85rem; margin: 0 0 .2rem !important; color: #1a1a1a; }
+    .fa-sub { margin: 1.1rem 0 .1rem !important; padding-top: .6rem; border-top: 1px solid #e5e5e5; font-weight: 700;
+      font-size: 1.12rem; color: #2563eb; }
+    .fa-sub:first-of-type { border-top: none; padding-top: 0; margin-top: .5rem !important; }
+    .fa-sub i { color: #2563eb; font-size: .9em; margin-right: .3rem; }
+    .paper-fig { margin: .8rem auto .4rem !important; text-align: center; max-width: 640px; }
+    .paper-fig img { width: 100%; border-radius: 4px; }
+    .paper-fig .figure-caption, .paper-table-wrap .figure-caption { text-align: center; font-size: .85rem; font-style: italic; }
+    svg.scatter { width: 100%; height: auto; display: block; }
+    svg.scatter .grid { stroke: #eee; } svg.scatter .axis { stroke: #999; }
+    svg.scatter .tick { font-size: 11px; fill: #666; } svg.scatter .lab { font-size: 13px; fill: #1a1a1a; }
+    svg.scatter .dl { font-size: 11px; fill: #444; } svg.scatter .legend text { font-size: 11.5px; fill: #444; }
+    svg.scatter .fit { stroke: #dc2626; stroke-dasharray: 5 4; stroke-width: 1.5; opacity: .7; }
+    svg.scatter .box { fill: #fff; stroke: #ccc; }
+    svg.scatter .pt circle:first-of-type, svg.scatter .pt rect, svg.scatter .pt polygon { stroke: #fff; stroke-width: 1.5; }
+    svg.scatter .pt:hover circle:first-of-type, svg.scatter .pt:hover rect, svg.scatter .pt:hover polygon { stroke: #1a1a1a; }
+    svg.scatter .pt { cursor: default; }
+    /* Appendix: LDS */
+    .lds-defs { flex: 1 1 360px; }
+    .lds-defs p { margin: .35rem 0; }
+    .lds-defs .eq { font-size: 1.1rem; margin: .7rem 0; text-align: center; }
+    .math { font-style: normal; white-space: nowrap; }
+    .c-near { color: #2563eb; font-weight: 600; } .c-far { color: #dc2626; font-weight: 600; }
+    .lds-steps { margin: .1rem 0 .6rem 1.4rem !important; }
+    .lds-key { padding: .6rem .9rem; border: 2px solid #2563eb; border-radius: 8px; background: #fff; }
+    .lds-fig { max-width: 720px; }
+    svg.ldsplot { width: 100%; height: auto; display: block; }
+    svg.ldsplot .grid { stroke: #eee; } svg.ldsplot .axis { stroke: #999; }
+    svg.ldsplot .tick { font-size: 11px; fill: #666; } svg.ldsplot .lab { font-size: 13px; fill: #1a1a1a; }
+    svg.ldsplot .leg { font-size: 11px; fill: #444; }
+    svg.ldsplot polyline, svg.ldsplot line.pretrained, svg.ldsplot line.scratch { fill: none; stroke-width: 2.5; }
+    svg.ldsplot .scratch { stroke-dasharray: 6 4; }
+    svg.ldsplot .hit { stroke: transparent; stroke-width: 12; fill: none; }
+    svg.ldsplot .crv:hover polyline:first-of-type { stroke-width: 4; }
+    .paper-table .chip-h.nat { background: #dcebfb; padding: .05rem .5rem; border-radius: 3px; }
+    #appendix .paper-table { margin: 0 auto; border-collapse: collapse; border-bottom: 2px solid #ddd; font-size: .85rem; width: auto; }
+    #appendix .paper-table th { font-weight: 700; padding: .3rem .8rem; border-bottom: 2px solid #ddd; text-align: center; }
+    #appendix .paper-table td { padding: .2rem .8rem; border-bottom: 1px solid #eee; text-align: center; }
+    #appendix .paper-table td:first-child, #appendix .paper-table th:first-child { text-align: left; }
+    #appendix h3.title { margin-top: 1.5rem; }
+    .discussion p { font-size: 1.05rem; line-height: 1.7; }
+    .paper-fig.wide-fig { max-width: 100%; }
+    .takeaways .paper-table tr.sep td { border-top: 1px solid #1a1a1a; }
+    .paper-table .chip.medl, .swatch.medl { background: #fdf4f6 !important; }
+    /* Finding D: initialisation-route diagram */
+    .routes { display: grid; grid-template-columns: max-content 150px 2.8rem; column-gap: .6rem; row-gap: .5rem;
+      justify-content: center; align-items: center; margin: .8rem auto .4rem; max-width: 100%; }
+    .route { display: contents; }
+    .route-head > span { font-size: .85rem; color: #666; font-style: italic; }
+    .route-head > span:last-child { font-style: normal; text-align: right; }
+    .route-head > span:first-child { grid-column: 1 / span 2; width: 0; min-width: 100%; }
+    .route-head > span:nth-child(2) { display: none; }
+    .chain { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem; }
+    .node { display: inline-flex; flex-direction: column; align-items: center; line-height: 1.15; padding: .2rem .65rem;
+      border-radius: 999px; font-size: .88rem; color: #1a1a1a; border: 1px solid transparent; white-space: nowrap; }
+    .node small { font-size: .68rem; color: #666; }
+    .node.rand { background: #f1f1f1; } .node.in { background: #dcebfb; }
+    .node.radin { background: #fdf4f6; border-color: #f3d3db; } .node.brats { background: #fcecef; border-color: #eeb8c6; }
+    .node.target { background: #fff; border: 1.5px solid #1a1a1a; font-weight: 600; }
+    .arr { color: #999; }
+    .bar { position: relative; height: 1.35rem; background: #f3f4f6; border-radius: 4px; }
+    .bar span { display: block; height: 100%; background: #cbd5e1; border-radius: 4px; }
+    .route.best .bar span { background: #2563eb; }
+    .gval { font-size: .85rem; color: #1a1a1a; text-align: right; } .route.best .gval { color: #2563eb; }
+    @media (max-width: 700px) { .routes { grid-template-columns: 1fr 2.8rem; } .route .chain { grid-column: 1 / -1; } .route .bar { grid-column: 1; } .route-head > span:first-child { grid-column: 1; } }
+    #appendix .paper-table tr.sep td { border-top: 1px solid #1a1a1a; }
+    #appendix .paper-table th[colspan] { border-bottom: 1px solid #ddd; }
+    .paper-table-legend { text-align: center; font-size: .82rem; margin-top: .5rem; color: #444; }
+    .swatch { display: inline-block; width: 1.6rem; height: .9rem; vertical-align: -0.2rem; margin: 0 .35rem 0 1rem; }
+    .gain { display: inline-block; margin: .2rem .3rem 0 0; padding: .05rem .5rem; border-radius: 999px;
+      background: #eff6ff; color: #2563eb; font-size: .85rem; white-space: nowrap; }
+  </style>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}]});"></script>
+</head>
+<body>
+
+  <div class="draft-banner">
+    DRAFT &mdash; local preview only. Red boxes mark text that we still have to fill in.
+  </div>
+
+  <button class="scroll-to-top" onclick="scrollToTop()" title="Scroll to top" aria-label="Scroll to top">
+    <i class="fas fa-chevron-up"></i>
+  </button>
+
+  <main id="main-content">
+  <section class="hero">
+    <div class="hero-body">
+      <div class="container is-max-desktop">
+        <div class="columns is-centered">
+          <div class="column has-text-centered">
+            <h1 class="title publication-title">From Natural Images<img class="title-thumb" src="static/images/title_cat.jpg" alt="natural image"> to Medical Scans<img class="title-thumb" src="static/images/title_ct.jpg" alt="CT scan">:<span class="title-sub">Transferability of Diffusion Models for Medical Image Generation</span></h1>
+            <div class="is-size-5 publication-authors">
+              <span class="author-block"><a href="https://scholar.google.com/citations?user=5Sc6GvEAAAAJ&amp;hl=en" target="_blank" rel="noopener">Efthymios Georgiou</a><sup>1,2</sup>,</span>
+              <span class="author-block"><a href="https://scholar.google.com/citations?user=B_dKcz4AAAAJ&amp;hl=en" target="_blank" rel="noopener">Ioannis Kakogeorgiou</a><sup>3</sup>,</span>
+              <span class="author-block"><a href="https://scholar.google.com/citations?user=Wio1KtsAAAAJ&amp;hl=en" target="_blank" rel="noopener">Sarah Brüningk</a><sup>1,2</sup></span>
+            </div>
+            <div class="publication-authors affiliations">
+              <span class="author-block"><sup>1</sup>Department of Digital Medicine, UNIBE</span>
+              <span class="author-block"><sup>2</sup>Department of Radiation Oncology, Bern University Hospital &amp; UNIBE</span>
+              <span class="author-block"><sup>3</sup>IIT, NCSR Demokritos</span><br>
+              <span class="author-block venue">WACV 2027 (Algorithms track)</span>
+            </div>
+
+            <div class="column has-text-centered">
+              <div class="publication-links">
+                <span class="link-block">
+                  <a href="#" class="external-link button is-normal is-rounded btn-arxiv">
+                    <span class="icon"><img class="arxiv-mark" src="static/images/arxiv-logomark-white.svg" alt=""></span><span>arXiv</span>
+                  </a>
+                </span>
+                <span class="link-block">
+                  <a href="https://github.com/CAIROLab-Bern/rad-dit" class="external-link button is-normal is-rounded btn-code">
+                    <span class="icon"><i class="fab fa-github"></i></span><span>Code</span>
+                  </a>
+                </span>
+                <span class="link-block">
+                  <a href="#" class="external-link button is-normal is-rounded btn-hf">
+                    <span class="icon">🤗</span><span>Models (coming soon)</span>
+                  </a>
+                </span>
+                <span class="link-block">
+                  <a href="#" id="present-btn" class="button is-normal is-rounded btn-present" title="Step through the page (P)">
+                    <span class="icon"><i class="fas fa-chalkboard-teacher"></i></span><span>Present</span>
+                  </a>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- TL;DR + highlights + jump cards -->
+  <section class="section tldr-section">
+    <div class="container is-max-desktop">
+      <p class="tldr"><b>TL;DR:</b> Initialising diffusion transformers with ImageNet weights improves medical image
+        generation, in both latent and pixel space denoising. Natural-image initialisation results in <strong>more spatially
+        structured representations, not more semantic ones</strong>, and this spatial structure (LDS<sub>C</sub>) correlates with
+        generation fidelity. Mixing natural with medical images also helps medical fidelity.</p>
+      <div class="hl-grid">
+        <a href="#finding-a"><span class="finding-icon"><i class="fas fa-long-arrow-alt-right"></i></span>
+          <span><b>A.</b> Transfer helps, and most in pixel space</span></a>
+        <a href="#finding-b"><span class="finding-icon wide"><i class="fas fa-border-all"></i><small>vs</small><i class="fas fa-brain"></i></span>
+          <span><b>B.</b> Spatial structure, not semantics</span></a>
+        <a href="#finding-c"><span class="finding-icon"><i class="fas fa-clone"></i></span>
+          <span><b>C.</b> Mixed-domain training</span></a>
+        <a href="#finding-d"><span class="finding-icon"><i class="fas fa-x-ray"></i></span>
+          <span><b>D.</b> Transfer outperforms medical pretraining</span></a>
+      </div>
+      <div class="jump-cards">
+        <a href="#setup"><i class="fas fa-layer-group"></i><span>Setup</span></a>
+        <a href="#findings"><i class="fas fa-list-ol"></i><span>Results</span></a>
+        <a href="#appendix"><i class="fas fa-book-open"></i><span>Appendix</span></a>
+        <a href="#BibTeX"><i class="fas fa-quote-right"></i><span>BibTeX</span></a>
+      </div>
+    </div>
+  </section>
+
+
+
+
+  <!-- Setup: models | data -->
+  <section class="section" id="setup">
+    <div class="container is-max-desktop">
+      <h2 class="title is-3 has-text-centered">Setup</h2>
+      <div class="columns">
+        <div class="column">
+          <h3 class="title is-5">Models</h3>
+          <ul class="setup-list">
+            <li><b>Pixel space:</b> JiT-B/16 (131M), JiT-L/16 (459M), JiT-H/16 (952M)</li>
+            <li><b>Latent space:</b> LightningDiT-XL/1 on VAVAE, LightningDiT-XL/2 on SDVAE and MedVAE (675M)</li>
+            <li><b>Joint denoising:</b> V-Co-B/16 with DINOv2 (260M)</li>
+            <li><b>Initialisation:</b> ImageNet-pretrained vs random (and RadImageNet for BraTS)</li>
+          </ul>
+        </div>
+        <div class="column">
+          <h3 class="title is-5">Data</h3>
+          <ul class="setup-list">
+            <li><b>RadImageNet:</b> CT and MR scans, 256&times;256</li>
+            <li><b>BraTS-GLI 2024:</b> brain MRI, 2D axial slices, 256&times;256, single-channel and 4-channel</li>
+            <li><b>ImageNet:</b> source of the pretrained checkpoints only</li>
+            <li><b>Metrics:</b> gFID for generation quality (lower is better, cfg = 1.0);
+              linear-probe classification accuracy for semantics; LDS<sub>C</sub> for spatial structure</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- Take-home messages (results) -->
+  <section class="section hero is-light" id="findings">
+    <div class="container is-max-desktop">
+      <h2 class="title is-3 has-text-centered">Results</h2>
+      <ol class="content takeaways">
+        <li id="finding-a">
+          <span class="finding-icon"><i class="fas fa-long-arrow-alt-right"></i></span>
+          <span class="finding-tag">Finding A</span>
+          <b class="head">Natural-image transfer improves medical image generation.</b>
+          <p class="fa-sub">The case of RadImageNet</p>
+          <ul class="fa-points">
+            <li><b>Transfer helps, and most in pixel space.</b> In latent space, LDiT-XL/1 improves by <strong>13.8%</strong>,
+              whereas in pixel space JiT improves by <strong>34.3%</strong> (B), <strong>21.6%</strong> (L), and
+              <strong>31.4%</strong> (H). Latent thus attains the best absolute performance (16.43), while pixel gains most
+              from transfer (21&ndash;34%).</li>
+            <li><b>The tokeniser explains this gap:</b> natural-image VAEs compress images 8&ndash;16&times; and reconstruct
+              radiology well (1.88 rFID) despite no medical training, giving the denoiser much of the transferable prior
+              already. Pixel diffusion has no such bottleneck: the denoiser benefits from the prior directly, so transfer
+              helps more.</li>
+          </ul>
+          <div class="paper-table-wrap">
+            <table class="paper-table">
+              <thead>
+                <tr><th rowspan="2">Denoiser</th><th colspan="2" class="th-group">gFID&darr;</th><th rowspan="2">&Delta;<sub>init</sub> (%)</th></tr>
+                <tr><th>Random</th><th><span class="chip-h nat">IN</span></th></tr>
+              </thead>
+              <tbody>
+              <tr class="group"><td colspan="4">Latent denoising</td></tr>
+              <tr><td><code class="chip">LDiT-XL/2</code> <span class="plus">+</span> <code class="chip med">MedVAE</code></td><td>21.33</td><td>&mdash;</td><td>&mdash;</td></tr>
+              <tr><td><code class="chip">LDiT-XL/2</code> <span class="plus">+</span> <code class="chip nat">SDVAE</code></td><td>19.15</td><td>&mdash;</td><td>&mdash;</td></tr>
+              <tr><td><code class="chip">LDiT-XL/1</code> <span class="plus">+</span> <code class="chip nat">VAVAE</code></td><td><u>19.05</u></td><td><b>16.43</b></td><td class="gain">2.6 (13.8%)</td></tr>
+              <tr class="group"><td colspan="4">Pixel denoising</td></tr>
+              <tr><td><code class="chip">JiT-B/16</code></td><td>55.50</td><td>36.48</td><td class="gain">19.0 (34.3%)</td></tr>
+              <tr><td><code class="chip">JiT-L/16</code></td><td>41.27</td><td><b>32.34</b></td><td class="gain">8.9 (21.6%)</td></tr>
+              <tr><td><code class="chip">JiT-H/16</code></td><td>47.89</td><td><u>32.83</u></td><td class="gain">15.1 (31.4%)</td></tr>
+              <tr class="group"><td colspan="4">Joint denoising</td></tr>
+              <tr><td><code class="chip">V-Co-B/16</code> <span class="plus">+</span> <code class="chip nat">DINOv2</code></td><td>&mdash;</td><td>28.86</td><td>&mdash;</td></tr>
+              </tbody>
+            </table>
+            <div class="paper-table-legend"><span class="swatch med"></span>Medical-image model
+              <span class="swatch nat"></span>Natural-image model</div>
+            <p class="figure-caption"><b>Table 1. RadImageNet (RadIN) 256&times;256 gFID across the three denoising paradigms.</b>
+              &Delta;<sub>init</sub> and &Delta;<sub>init</sub>% are the absolute and relative gFID improvement of IN vs
+              R<span style="font-variant: small-caps">andom</span> Denoiser. <b>Bold</b> = best per category.</p>
+          </div>
+          <p class="fa-sub">The case of BraTS</p>
+          <ul class="fa-points">
+            <li><b>Single-channel MRI reproduces the transfer pattern.</b> IN initialisation improves both latent and
+              pixel-space models: LDiT-XL/1 by 1.56 gFID and JiT-L/16 by 8.59, again a larger absolute gain in pixel space.</li>
+            <li><b>Multi-channel generation benefits from capacity.</b> IN initialisation nonetheless remains beneficial,
+              improving JiT-L/16 by 8.80 gFID over Random, with JiT-H/16 outperforming JiT-L/16.</li>
+          </ul>
+          <div class="paper-table-wrap">
+            <div class="table-pair">
+              <div>
+                <p class="panel-title">(a) Single-channel</p>
+                <table class="paper-table">
+                  <thead>
+                    <tr><th rowspan="2">Denoiser</th><th colspan="2" class="th-group">gFID&darr;</th><th rowspan="2">&Delta;<sub>init</sub></th></tr>
+                    <tr><th>Random</th><th><span class="chip-h nat">IN</span></th></tr>
+                  </thead>
+                  <tbody>
+                <tr class="group"><td colspan="4">Latent denoising</td></tr>
+                <tr><td><code class="chip">LDiT-XL/1</code></td><td>9.22</td><td><b>7.66</b></td><td class="gain">1.56</td></tr>
+                <tr class="group"><td colspan="4">Pixel denoising</td></tr>
+                <tr><td><code class="chip">JiT-L/16</code></td><td>37.93</td><td><u>29.34</u></td><td class="gain">8.59</td></tr>
+                <tr><td><code class="chip">JiT-H/16</code> <span class="row-note">(10 ep.)</span></td><td>&mdash;</td><td><b>29.13</b></td><td>&mdash;</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div>
+                <p class="panel-title">(b) Multi-channel</p>
+                <table class="paper-table">
+                  <thead>
+                    <tr><th rowspan="2">Denoiser</th><th colspan="2" class="th-group">gFID&darr;</th><th rowspan="2">&Delta;<sub>init</sub></th></tr>
+                    <tr><th>Random</th><th><span class="chip-h nat">IN</span></th></tr>
+                  </thead>
+                  <tbody>
+                <tr class="group"><td colspan="4">Pixel denoising</td></tr>
+                <tr><td><code class="chip">JiT-L/16</code></td><td>43.97</td><td>35.17</td><td class="gain">8.80</td></tr>
+                <tr><td><code class="chip">JiT-H/16</code></td><td>&mdash;</td><td><b>32.75</b></td><td>&mdash;</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <p class="figure-caption"><b>Table 2. BraTS-GLI 256&times;256 gFID across single- and multi-channel diffusion.</b>
+              <b>(a)</b> Single-channel: the denoiser randomly generates <i>one</i> of the four MRI modalities;
+              <b>(b)</b> Multi-channel: the denoiser generates <i>all four</i> MRI modalities. Epochs: 40 in (a), except
+              JiT-H/16 (10); 55 in (b). <b>Bold</b> = best per panel.</p>
+          </div>
+          <p class="fa-sub">Do FID gains carry clinical signal?</p>
+          <ul class="fa-points">
+            <li>We train two JiT-B/16 (scratch; IN) models on the whole RadIN, conditioned on all 67 classes, and generate
+              100k samples over the 19 (validation) classes, so their gFIDs differ from Table 1. Together with 100k real
+              training samples, this gives three 100k pools with identical pathology distributions.</li>
+            <li>We find that lower gFID translates to lower FD-Rad, <i>i.e.</i>, more
+              clinically meaningful images, and to macroF1 improvements of a ResNet-50 pathology classifier trained on
+              the synthetic data.</li>
+          </ul>
+          <div class="paper-table-wrap">
+            <table class="paper-table">
+              <thead><tr><th>Denoiser</th><th>gFID&darr;</th><th>FD-Rad&darr;</th><th>macroF1&uarr;</th></tr></thead>
+              <tbody>
+                <tr><td><code class="chip nat">JiT-B/16</code></td><td><b>40.81</b></td><td><b>37.99</b></td><td><b>0.47</b></td></tr>
+                <tr><td><code class="chip">JiT-B/16</code></td><td>72.67</td><td>87.46</td><td>0.43</td></tr>
+              </tbody>
+            </table>
+            <p class="figure-caption"><b>Clinical proxies on synthetic data.</b> We measure FD-Rad and macroF1 on two
+              synthetic 100k pools. A classifier trained on the real data pool achieves 0.72.</p>
+          </div>
+        </li>
+        <li id="finding-b">
+          <span class="finding-icon wide"><i class="fas fa-border-all"></i><small>vs</small><i class="fas fa-brain"></i></span>
+          <span class="finding-tag">Finding B</span>
+          <b class="head">What transfers: spatial structure, not semantics.</b>
+          Since the pixel denoiser carries the entire prior, we focus on pixel-space JiT and ask whether the benefit reflects
+          high-level (semantics) or low-level (spatial) structure.
+          <p class="fa-sub">Semantics do not predict generation quality</p>
+          <ul class="fa-points">
+            <li>One hypothesis is that pretraining helps via semantics, either by transferring semantic features or by
+              providing an initialisation from which it learns stronger semantics.</li>
+            <li>We probe frozen denoiser representations to classify the 19 pathology classes of RadIN. Since the
+              generative models are conditioned on 5 broad anatomy classes, probes capture semantic information beyond
+              generation labels.</li>
+            <li><b>Higher probe accuracy does not translate to better generation.</b> JiT-B/16 from scratch probes similar
+              to its IN counterpart (0.56) yet generates far worse samples (55.50 vs 36.48 gFID). JiT-B/16 probes slightly
+              higher than JiT-H/16 (0.56 vs 0.54) but has worse gFID (36.48 vs 32.83). In latent space the scratch model
+              also probes higher than the IN-init (0.557 vs 0.510) while generating worse.</li>
+            <li><strong>Semantic separability cannot explain the transfer benefit.</strong></li>
+          </ul>
+          <figure class="paper-fig">
+            <img src="static/images/fig_probe_pathology_JiT-B16_pair.png" alt="Linear-probe top-1 accuracy per layer for JiT-B/16 pretrained and scratch" loading="lazy">
+            <figcaption class="figure-caption"><b>Semantic probing.</b> Top-1 accuracy of linear probes on frozen JiT-B
+              representations classifying 19 RadIN pathology classes, by layer depth and noise level <i>t</i>. Averages
+              over three runs.</figcaption>
+          </figure>
+          <p class="fa-sub">IN-initialised models exhibit better spatial structure</p>
+          <ul class="fa-points">
+            <li>An alternative hypothesis is that the benefit comes from spatial (low-level) structure.</li>
+            <li>We calculate LDS<sub>C</sub> (<a href="#appendix">Appendix</a>), a metric of the spatial structure in the
+              internal representations, for all models, and find that IN-initialised models consistently outperform their
+              randomly initialised counterparts, by <strong>2.8%&ndash;10.3%</strong> (B/16 10.3%, L/16 2.8%, H/16 4.3%).</li>
+          </ul>
+          <div class="paper-table-wrap">
+            <table class="paper-table">
+              <thead><tr><th>Denoiser</th><th>Random</th><th><span class="chip-h nat">IN</span></th></tr></thead>
+              <tbody>
+                <tr><td><code class="chip">JiT-B/16</code></td><td>0.574</td><td><b>0.633</b></td></tr>
+                <tr><td><code class="chip">JiT-L/16</code></td><td>0.639</td><td><b>0.657</b></td></tr>
+                <tr><td><code class="chip">JiT-H/16</code></td><td>0.620</td><td><b>0.646</b></td></tr>
+              </tbody>
+            </table>
+            <p class="figure-caption"><b>Peak LDS<sub>C</sub> per model.</b> Max LDS<sub>C</sub> across JiT layers
+              (first and last block excluded), at <i>t</i> = 0.5.</p>
+          </div>
+          <p class="fa-sub">Spatial structure correlates with gFID</p>
+          <ul class="fa-points">
+            <li>We find that gFID correlates with LDS<sub>C</sub> (<a href="#appendix">Appendix</a>):
+              <strong>|r| = 0.846</strong> over 12 models. The fitted law is
+              &Delta;gFID = &minus;296.6 &times; &Delta;LDS<sub>C</sub>.</li>
+            <li>From the LDS<sub>C</sub> gap alone, the fitted law predicts 92/58/52% of the pretrained-scratch gFID gap
+              for B/L/H (67% on average). Two checks confirm this: Monte-Carlo perturbation of every gFID by
+              &sigma; = 1 (roughly the seed noise) gives 69 &plusmn; 6% over 5k refits, and refitting without the
+              predicted size gives 95/62/42%. <strong>LDS<sub>C</sub> predicts about two-thirds of the
+              pretraining benefit.</strong></li>
+            <li><strong><i>Better spatial organisation is one channel through which pretraining manifests.</i></strong></li>
+          </ul>
+          <figure class="paper-fig">
+            <svg class="scatter" viewBox="0 0 600 330" role="img" aria-label="LDS_C versus gFID for 12 JiT variants, Pearson |r| = 0.846">
+<line x1="56.0" x2="56.0" y1="16" y2="280" class="grid"/><text x="56.0" y="296" class="tick" text-anchor="middle">0.60</text>
+<line x1="136.6" x2="136.6" y1="16" y2="280" class="grid"/><text x="136.6" y="296" class="tick" text-anchor="middle">0.61</text>
+<line x1="217.2" x2="217.2" y1="16" y2="280" class="grid"/><text x="217.2" y="296" class="tick" text-anchor="middle">0.62</text>
+<line x1="297.8" x2="297.8" y1="16" y2="280" class="grid"/><text x="297.8" y="296" class="tick" text-anchor="middle">0.63</text>
+<line x1="378.5" x2="378.5" y1="16" y2="280" class="grid"/><text x="378.5" y="296" class="tick" text-anchor="middle">0.64</text>
+<line x1="459.1" x2="459.1" y1="16" y2="280" class="grid"/><text x="459.1" y="296" class="tick" text-anchor="middle">0.65</text>
+<line x1="539.7" x2="539.7" y1="16" y2="280" class="grid"/><text x="539.7" y="296" class="tick" text-anchor="middle">0.66</text>
+<line x1="56" x2="580" y1="267.4" y2="267.4" class="grid"/><text x="48" y="271.4" class="tick" text-anchor="end">30</text>
+<line x1="56" x2="580" y1="204.6" y2="204.6" class="grid"/><text x="48" y="208.6" class="tick" text-anchor="end">35</text>
+<line x1="56" x2="580" y1="141.7" y2="141.7" class="grid"/><text x="48" y="145.7" class="tick" text-anchor="end">40</text>
+<line x1="56" x2="580" y1="78.9" y2="78.9" class="grid"/><text x="48" y="82.9" class="tick" text-anchor="end">45</text>
+<line x1="56" x2="580" y1="16.0" y2="16.0" class="grid"/><text x="48" y="20.0" class="tick" text-anchor="end">50</text>
+<line x1="56" x2="56" y1="16" y2="280" class="axis"/><line x1="56" x2="580" y1="280" y2="280" class="axis"/>
+<text x="318" y="318" class="lab" text-anchor="middle">Spatial structure (LDS<tspan baseline-shift="sub" font-size="9">C</tspan>) &#8594;</text>
+<text transform="translate(16 148) rotate(-90)" class="lab" text-anchor="middle">&#8592; gFID</text>
+<line x1="56.0" y1="45.1" x2="561.5" y2="278.9" class="fit"/>
+<g class="pt"><title>B IN s0: LDS_C 0.6327, gFID 36.48</title><circle cx="319.6" cy="186.0" r="5.5" fill="#2563eb"/><circle cx="319.6" cy="186.0" r="11" fill="transparent"/></g>
+<g class="pt"><title>B IN s1: LDS_C 0.6340, gFID 35.55</title><circle cx="330.1" cy="197.7" r="5.5" fill="#2563eb"/><circle cx="330.1" cy="197.7" r="11" fill="transparent"/></g>
+<g class="pt"><title>B IN 50%: LDS_C 0.6232, gFID 37.90</title><circle cx="243.0" cy="168.1" r="5.5" fill="#2563eb"/><circle cx="243.0" cy="168.1" r="11" fill="transparent"/></g>
+<g class="pt"><title>B IN 25%: LDS_C 0.6104, gFID 42.50</title><circle cx="139.8" cy="110.3" r="5.5" fill="#2563eb"/><circle cx="139.8" cy="110.3" r="11" fill="transparent"/></g>
+<g class="pt"><title>L IN: LDS_C 0.6570, gFID 32.34</title><circle cx="515.5" cy="238.0" r="5.5" fill="#2563eb"/><circle cx="515.5" cy="238.0" r="11" fill="transparent"/></g>
+<g class="pt"><title>L scratch: LDS_C 0.6394, gFID 41.27</title><rect x="368.6" y="120.7" width="10" height="10" fill="#dc2626"/><circle cx="373.6" cy="125.7" r="11" fill="transparent"/></g>
+<g class="pt"><title>H IN: LDS_C 0.6463, gFID 32.83</title><circle cx="429.2" cy="231.9" r="5.5" fill="#2563eb"/><circle cx="429.2" cy="231.9" r="11" fill="transparent"/></g>
+<g class="pt"><title>H scratch: LDS_C 0.6197, gFID 47.89</title><rect x="209.8" y="37.5" width="10" height="10" fill="#dc2626"/><circle cx="214.8" cy="42.5" r="11" fill="transparent"/></g>
+<g class="pt"><title>L mix5: LDS_C 0.6561, gFID 31.46</title><polygon points="508.3,242.6 514.3,253.6 502.3,253.6" fill="#16a34a"/><circle cx="508.3" cy="249.1" r="11" fill="transparent"/></g>
+<g class="pt"><title>L mix15: LDS_C 0.6546, gFID 30.94</title><polygon points="496.2,249.1 502.2,260.1 490.2,260.1" fill="#16a34a"/><circle cx="496.2" cy="255.6" r="11" fill="transparent"/></g>
+<g class="pt"><title>L mix25: LDS_C 0.6529, gFID 31.01</title><polygon points="482.5,248.2 488.5,259.2 476.5,259.2" fill="#16a34a"/><circle cx="482.5" cy="254.7" r="11" fill="transparent"/></g>
+<g class="pt"><title>L mix50: LDS_C 0.6464, gFID 31.80</title><polygon points="430.1,238.3 436.1,249.3 424.1,249.3" fill="#16a34a"/><circle cx="430.1" cy="244.8" r="11" fill="transparent"/></g>
+<text x="310.6" y="200.0" class="dl" text-anchor="end">B IN</text>
+<text x="252.0" y="172.1" class="dl" text-anchor="start">B IN 50%</text>
+<text x="147.8" y="114.3" class="dl" text-anchor="start">B IN 25%</text>
+<text x="507.5" y="229.0" class="dl" text-anchor="end">L IN</text>
+<text x="382.6" y="129.7" class="dl" text-anchor="start">L scratch</text>
+<text x="420.2" y="223.9" class="dl" text-anchor="end">H IN</text>
+<text x="223.8" y="46.5" class="dl" text-anchor="start">H scratch</text>
+<text x="467.1" y="272.5" class="dl" text-anchor="middle">L mix 5&#8211;50%</text>
+<g transform="translate(470 24)"><rect width="104" height="24" rx="4" class="box"/><text x="52" y="16" class="lab" text-anchor="middle">|r| = 0.846</text></g>
+<g transform="translate(70 26)" class="legend"><circle cx="5" cy="0" r="5" fill="#2563eb"/><text x="14" y="4">IN-init</text><rect x="78" y="-5" width="10" height="10" fill="#dc2626"/><text x="94" y="4">scratch</text><polygon points="165,-6 171,5 159,5" fill="#16a34a"/><text x="176" y="4">mixed</text><line x1="228" x2="250" y1="0" y2="0" class="fit"/><text x="255" y="4">linear fit</text></g>
+</svg>
+            <figcaption class="figure-caption"><b>LDS<sub>C</sub> correlation with gFID across 12 JiT variants.</b>
+              LDS<sub>C</sub> here is the max value across JiT layers, at <i>t</i> = 0.5.</figcaption>
+          </figure>
+        </li>
+        <li id="finding-c">
+          <span class="finding-icon"><i class="fas fa-clone"></i></span>
+          <span class="finding-tag">Finding C</span>
+          <b class="head">Mixed-domain training.</b>
+          <p class="fa-sub">Early-to-mid representations are shared across domains</p>
+          <ul class="fa-points">
+            <li>We further test the structural hypothesis and train JiT-L/16 jointly on RadIN and 10% IN
+              (mixed-JiT-L/16), so a single model represents both domains internally, and measure the per-block cosine
+              similarity of its representations (concatenated over the token sequence) under natural and medical inputs.</li>
+            <li>Early-to-mid blocks (0&ndash;16) stay highly similar across domains (<strong>cos &ge; 0.7</strong>), so the
+              model computes similar representations for both domains there.</li>
+            <li>Deeper blocks (17&ndash;22) behave differently: cross-domain similarity drops (cos &asymp; 0.35&ndash;0.50),
+              suggesting domain-specific behaviour.</li>
+            <li>In the same network and the same blocks, intra-class and intra-domain pairs stay highly similar
+              (cos &asymp; 0.9), so the drop is specific to cross-domain pairs.</li>
+          </ul>
+          <figure class="paper-fig wide-fig">
+            <img src="static/images/fig_class_aware_cond.png" alt="Per-block cosine similarity heatmaps of mixed-JiT-L/16 for intra-class, intra-domain and cross-domain pairs" loading="lazy">
+            <figcaption class="figure-caption"><b>Cosine similarity of internal representations in mixed-JiT-L/16.</b>
+              Blocks (y-axis) and noise levels <i>t</i> (x-axis). Intra-class and intra-domain pairs (top row);
+              cross-domain pairs (bottom row).</figcaption>
+          </figure>
+          <p class="fa-sub">Natural-image mixing helps medical fidelity</p>
+          <ul class="fa-points">
+            <li>Since both domains yield similar representations, we sweep the ratio of natural images added to the mix.
+              gFID improves across all ratios, with the largest gain (<strong>1.4 gFID</strong>) at 15%.</li>
+            <li>Even at 1:1 we observe a small improvement, though its magnitude sits near gFID noise.</li>
+          </ul>
+          <div class="paper-table-wrap">
+            <table class="paper-table">
+              <thead><tr><th>IN mix (%)</th><th>0</th><th>5</th><th>15</th><th>25</th><th>50</th></tr></thead>
+              <tbody>
+                <tr><td>RadIN:IN</td><td>1:0</td><td>19:1</td><td>5.7:1</td><td>3:1</td><td>1:1</td></tr>
+                <tr class="sep"><td>gFID&darr;</td><td>32.34</td><td>31.46</td><td><b>30.94</b></td><td>31.01</td><td>31.80</td></tr>
+              </tbody>
+            </table>
+            <p class="figure-caption"><b>Natural-image mixing.</b> gFID of JiT-L/16 (IN) trained for 80 epochs on mixed
+              medical and natural data.</p>
+          </div>
+        </li>
+        <li id="finding-d">
+          <span class="finding-icon"><i class="fas fa-x-ray"></i></span>
+          <span class="finding-tag">Finding D</span>
+          <b class="head">Natural-image transfer outperforms medical pretraining.</b>
+          A natural alternative to IN-init is to pretrain on medical data directly. To our knowledge no 2D radiology
+          denoiser weights exist at a compatible architecture, so we train our own. We test two cases: single and
+          multi-channel target domain.
+          <p class="fa-sub">Single-channel target</p>
+          <ul class="fa-points">
+            <li>We (pre)train a JiT-B/16 from scratch on RadIN for 160 epochs and fine-tune it to single-channel BraTS
+              for 20 epochs. Notably, directly fine-tuning the IN-init model for 20 epochs is better by
+              <strong>5 gFID points</strong>.</li>
+            <li>Adding a RadIN stage on top of IN slightly improves, though near seed std (&sigma;<sub>IN</sub> = 0.41).</li>
+          </ul>
+          <div class="routes">
+            <div class="route route-head"><span>JiT-B/16 &rarr; single-channel BraTS; pill length &prop; training examples (RadIN epochs)</span><span></span><span>gFID&darr;</span></div>
+            <div class="route"><div class="chain"><span class="node rand">random</span><span class="arr">&rarr;</span><span class="node radin" style="min-width:280px">RadIN<small>160 ep</small></span><span class="arr">&rarr;</span><span class="node target" style="min-width:90px">BraTS 1ch<small>20 ep</small></span></div><div class="bar" title="random → RadIN → BraTS: gFID 36.73"><span style="width:100.0%"></span></div><b class="gval">36.73</b></div>
+            <div class="route"><div class="chain"><span class="node in">ImageNet</span><span class="arr">&rarr;</span><span class="node target" style="min-width:90px">BraTS 1ch<small>20 ep</small></span></div><div class="bar" title="ImageNet → BraTS: gFID 31.73"><span style="width:86.4%"></span></div><b class="gval">31.73</b></div>
+            <div class="route best"><div class="chain"><span class="node in">ImageNet</span><span class="arr">&rarr;</span><span class="node radin" style="min-width:140px">RadIN<small>80 ep</small></span><span class="arr">&rarr;</span><span class="node target" style="min-width:90px">BraTS 1ch<small>20 ep</small></span></div><div class="bar" title="ImageNet → RadIN → BraTS: gFID 31.13"><span style="width:84.8%"></span></div><b class="gval">31.13</b></div>
+          </div>
+          <div class="paper-table-wrap">
+            <table class="paper-table">
+              <thead><tr><th>Denoiser (init)</th><th>Pretrain</th><th>Ep.</th><th>gFID&darr;</th></tr></thead>
+              <tbody>
+                <tr><td><code class="chip">JiT-B/16 (Rand)</code></td><td><code class="chip medl">RadIN</code></td><td>160</td><td>36.73</td></tr>
+                <tr class="sep"><td><code class="chip nat">JiT-B/16 (IN)</code></td><td><code class="chip medl">RadIN</code></td><td>80</td><td><b>31.13</b></td></tr>
+                <tr><td><code class="chip nat">JiT-B/16 (IN)</code></td><td>&mdash;</td><td>&mdash;</td><td>31.73</td></tr>
+              </tbody>
+            </table>
+            <p class="figure-caption"><b>Single-channel BraTS transfer.</b></p>
+          </div>
+          <p class="fa-sub">Multi-channel target</p>
+          <ul class="fa-points">
+            <li>We test whether an intermediate single-channel medical stage helps before transferring to multi-channel
+              BraTS. Direct IN transfer is the best (<strong>40.17</strong>).</li>
+            <li>Inserting a medical stage only hurts, giving 50.9 after single-channel BraTS and 75.4 after RadIN.</li>
+          </ul>
+          <div class="routes">
+            <div class="route route-head"><span>JiT-L/16 &rarr; multi-channel BraTS; pill length &prop; training examples (RadIN epochs), same target block</span><span></span><span>gFID&darr;</span></div>
+            <div class="route"><div class="chain"><span class="node in">ImageNet</span><span class="arr">&rarr;</span><span class="node radin" style="min-width:140px">RadIN<small>80 ep</small></span><span class="arr">&rarr;</span><span class="node target" style="min-width:96px">BraTS 4ch<small>30 ep</small></span></div><div class="bar" title="ImageNet → RadIN → BraTS 4ch: gFID 75.4"><span style="width:100.0%"></span></div><b class="gval">75.4</b></div>
+            <div class="route"><div class="chain"><span class="node in">ImageNet</span><span class="arr">&rarr;</span><span class="node brats" style="min-width:140px">BraTS 1ch<small>40 ep</small></span><span class="arr">&rarr;</span><span class="node target" style="min-width:96px">BraTS 4ch<small>30 ep</small></span></div><div class="bar" title="ImageNet → BraTS 1ch → BraTS 4ch: gFID 50.9"><span style="width:67.5%"></span></div><b class="gval">50.9</b></div>
+            <div class="route best"><div class="chain"><span class="node in">ImageNet</span><span class="arr">&rarr;</span><span class="node target" style="min-width:96px">BraTS 4ch<small>30 ep</small></span></div><div class="bar" title="ImageNet → BraTS 4ch: gFID 40.17"><span style="width:53.3%"></span></div><b class="gval">40.17</b></div>
+          </div>
+          <div class="paper-table-wrap">
+            <table class="paper-table">
+              <thead><tr><th>Denoiser (init)</th><th>Pretrain</th><th>Ep.</th><th>gFID&darr;</th></tr></thead>
+              <tbody>
+                <tr><td><code class="chip nat">JiT-L/16</code></td><td><code class="chip medl">RadIN</code></td><td>30</td><td>75.4</td></tr>
+                <tr><td><code class="chip nat">JiT-L/16</code></td><td><code class="chip med">BraTS</code></td><td>30</td><td>50.9</td></tr>
+                <tr class="sep"><td><code class="chip nat">JiT-L/16</code></td><td>&mdash;</td><td>30</td><td><b>40.17</b></td></tr>
+              </tbody>
+            </table>
+            <p class="figure-caption"><b>Multi-channel BraTS transfer.</b></p>
+          </div>
+          <div class="paper-table-legend"><span class="swatch medl"></span>RadIN pretraining
+            <span class="swatch med"></span>BraTS pretraining <span class="swatch nat"></span>IN-initialised denoiser</div>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+
+  <!-- Discussion: combines the findings -->
+  <section class="section" id="discussion">
+    <div class="container is-max-desktop">
+      <h2 class="title is-3 has-text-centered">Discussion</h2>
+      <div class="content discussion">
+        <p>Natural-image (ImageNet) initialisation of the denoiser improves medical image generation
+          (<a href="#finding-a">Finding A</a>). Semantics do not explain this benefit since models trained from scratch reach
+          similar semantic probe accuracy yet generate worse samples. Spatial structure does. LDS<sub>C</sub>, a spatial
+          structure metric adapted to internal denoiser representations, predicts about two-thirds of the pretraining
+          benefit (<a href="#finding-b">Finding B</a>). <strong>Therefore, better spatial organisation is one channel
+          through which pretraining manifests.</strong>
+          Natural and medical images have very different high-level content. Yet a mixed-domain denoiser computes similar
+          early-to-mid representations for both domains and separates them only in its late blocks.
+          Furthermore, mixing natural
+          images into medical training improves medical gFID (<a href="#finding-c">Finding C</a>). Both results point
+          towards lower-level information shared across the two domains.
+          Finally, medical pretraining, although much closer to the target domain, does not give a further boost in our
+          experiments (<a href="#finding-d">Finding D</a>), suggesting (again) that domain-specific, higher-level information is
+          not what drives the benefit. <strong>Together, these results show that the benefit is tied to natural-image
+          initialisation.</strong>
+        </p>
+      </div>
+    </div>
+  </section>
+
+
+
+
+  <!-- Appendix: LDS and LDS_C -->
+  <section class="section" id="appendix">
+    <div class="container is-max-desktop">
+      <h2 class="title is-3 has-text-centered">Appendix</h2>
+      <h3 class="title is-5">LDS and LDS<sub>C</sub></h3>
+      <ul class="fa-points">
+        <li>Spatial structure metrics describe an image by its internal layout, <i>e.g.</i>, how each patch resembles
+          the other patches of the same image, rather than by its appearance.</li>
+        <li>Singh <i>et al.</i> measure this on the <i>target representation</i> of representation alignment. We measure
+          it on the <i>internal representations</i> of the denoiser itself.</li>
+      </ul>
+      <div class="lds-defs">
+        <ul class="fa-points">
+          <li>A 256&times;256 image gives a 16&times;16 grid of patch tokens.</li>
+          <li>For each pair of tokens <i>i</i>, <i>j</i>, we take their cosine similarity K<sub>ij</sub> and their
+            Manhattan distance d<sub>ij</sub> on the grid.</li>
+          <li>LDS compares <span class="c-near">near</span> pairs (adjacent tokens, d<sub>ij</sub> = 1) with
+              <span class="c-far">far</span> pairs (d<sub>ij</sub> &ge; 6):</li>
+        </ul>
+        <div class="eq">$$\mathrm{LDS}_l = \textcolor{#2563eb}{\mathbb{E}_{d_{ij} < R_\mathrm{n}}\left[K_{ij}\right]}
+          - \textcolor{#dc2626}{\mathbb{E}_{d_{ij} \geq R_\mathrm{f}}\left[K_{ij}\right]}$$</div>
+        <ul class="fa-points">
+          <li><b>LDS<sub>C</sub></b> makes two changes: 1) mean-centres the tokens before the cosine, and 2) excludes the I/O blocks, whose
+            representations stay close to the pixel space.</li>
+          <li>We report the peak over blocks at <i>t</i> = 0.5.</li>
+        </ul>
+        <div class="lds-key"><strong>High LDS<sub>C</sub></strong>: near tokens agree, far tokens differ
+          &rarr; <b>spatially structured features</b>. In practice, nearby patches, <i>e.g.</i>, the fur of a bird
+          or a tissue in an MRI scan, have similar features.</div>
+      </div>
+      <figure class="paper-fig wide-fig">
+        <img src="static/images/fig_lds_definition.svg" loading="lazy"
+             alt="RadImageNet image with its 16x16 patch tokens, near and far token pairs, near and far terms of JiT-L/16, and LDS_C per block">
+        <figcaption class="figure-caption"><b>LDS and LDS<sub>C</sub>.</b> a) A RadImageNet image and its patch tokens.
+          b) Near and far pairs of one token. c) LDS<sub>C</sub> is the near term minus the far term (JiT-L/16, block 17).
+          d) LDS<sub>C</sub> per block. The blocks next to the input and output stay close to the pixel space.</figcaption>
+      </figure>
+      <h3 class="title is-5">Robustness to the I/O exclusion</h3>
+      <ul class="fa-points">
+        <li>The paper excludes only the first and last block.</li>
+        <li>In deeper models, the near-input region is longer. The L/16 and H/16 scratch models reach their highest
+          LDS<sub>C</sub> in block 1, which makes their IN vs. scratch gap small (2.8% and 4.3%, vs. 10.3% for B/16).</li>
+        <li>If we exclude 5% or 10% of the depth at each end, the scratch peaks move into the trunk, and the gap becomes
+          similar for all sizes (10.3 / 14.3 / 13.9% at 10%).</li>
+        <li>The correlation with gFID increases (|r| = 0.846 &rarr; 0.903 &rarr; 0.945), and the IN peaks do not change.
+          <strong>The paper rule is the conservative choice.</strong></li>
+      </ul>
+      <figure class="paper-fig wide-fig">
+        <img src="static/images/fig_lds_c_io_exclusion.svg" loading="lazy"
+             alt="LDS_C per block and LDS_C versus gFID scatter for three I/O exclusion rules">
+        <figcaption class="figure-caption"><b>Robustness to the I/O exclusion.</b> Top: LDS<sub>C</sub> per block for
+          JiT-B/L/H, IN (solid) and scratch (dashed). Bottom: peak LDS<sub>C</sub> vs. gFID for the 12 models of Finding B.
+          Columns: first + last block (paper), first/last 5%, first/last 10% of depth.</figcaption>
+      </figure>
+      <h3 class="title is-5">Seed variance</h3>
+      <ul class="fa-points">
+        <li>The seed noise is small compared with the IN&ndash;random gap (JiT-B/16 on RadIN: &sigma;<sub>IN</sub> = 0.41,
+          &sigma;<sub>Rand</sub> = 1.02 gFID over three seeds).</li>
+      </ul>
+    </div>
+  </section>
+
+
+  <!-- BibTeX -->
+  <section class="section" id="BibTeX">
+    <div class="container is-max-desktop content">
+      <div class="bibtex-header">
+        <h2 class="title is-3">BibTeX</h2>
+        <button class="copy-bibtex-btn" onclick="copyBibTeX()" title="Copy BibTeX to clipboard">
+          <i class="fas fa-copy"></i>
+          <span class="copy-text">Copy</span>
+        </button>
+      </div>
+      <pre id="bibtex-code"><code>@inproceedings{georgiou2027natural,
+  title     = {From Natural Images to Medical Scans: Transferability of Diffusion Models for Medical Image Generation},
+  author    = {Georgiou, Efthymios and Kakogeorgiou, Ioannis and Br{\"u}ningk, Sarah},
+  booktitle = {2027 IEEE/CVF Winter Conference on Applications of Computer Vision (WACV)},
+  year      = {2027}
+}</code></pre>
+    </div>
+  </section>
+  </main>
+
+
+  <footer class="footer">
+    <div class="container">
+      <div class="columns is-centered">
+        <div class="column is-8">
+          <div class="content">
+            <p>
+              This page was built using the <a href="https://github.com/eliahuhorwitz/Academic-project-page-template" target="_blank">Academic Project Page Template</a> which was adopted from the <a href="https://nerfies.github.io" target="_blank">Nerfies</a> project page.
+              You are free to borrow the source code of this website, we just ask that you link back to this page in the footer. <br> This website is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/" target="_blank">Creative
+              Commons Attribution-ShareAlike 4.0 International License</a>.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>
